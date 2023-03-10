@@ -97,9 +97,9 @@ rule depositRevertsIfNoSharesMinted(env e) {
 }
 
 
-    /*//////////////////////////////////////////////////////////////
-                               UNIT - TEST
-    //////////////////////////////////////////////////////////////*/
+/*//////////////////////////////////////////////////////////////
+                            UNIT - TEST
+//////////////////////////////////////////////////////////////*/
 
 rule integrityOfTransfer(env e,address to, uint256 amount) {
     requireInvariant totalSupplyIsSumOfBalances(e);
@@ -135,3 +135,30 @@ rule integrityOfDeposit(env e, uint256 assets, address receiver) {
     assert preview == actual; 
     assert false;
 }
+
+/*//////////////////////////////////////////////////////////////
+                        VARIABLE TRANSITIONS
+//////////////////////////////////////////////////////////////*/
+
+rule increaseOfBalanceOfUser (
+        env e, 
+        calldataarg args, 
+        method f, 
+        address user
+) {
+    uint256 balanceBefore = balanceOf(user);
+    
+    f(e,args);
+
+    uint256 balanceAfter = balanceOf(user);
+
+    assert (
+        balanceAfter > balanceBefore => (
+            f.selector == transfer(address,uint256).selector ||
+            f.selector == transferFrom(address, address, uint256).selector ||
+            f.selector == deposit(uint256,address).selector ||
+            f.selector == mint(uint256,address).selector
+        )
+    );
+}
+
