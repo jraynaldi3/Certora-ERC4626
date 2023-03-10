@@ -1,5 +1,5 @@
-using DummyERC20A as ERC20a 
-using DummyERC20B as ERC20b 
+using DummyERC20A as ERC20a
+using DummyERC20B as ERC20b
 
 methods {
     name() returns string envfree;
@@ -12,7 +12,7 @@ methods {
     nonces(address) returns uint256 envfree;
 
     approve(address,uint256) returns bool;
-    transfer(address,uint256) returns bool => DISPATCHER(true);
+    transfer(address,uint256) returns bool;//=> DISPATCHER(true);
     transferFrom(address,address,uint256) returns bool => DISPATCHER(true);
     deposit(uint256,address);
     mint(uint256,address);
@@ -84,14 +84,54 @@ invariant totalSupplyIsSumOfBalances(env e)
 // Property: if a deposit fails, the user's balance should not change
 rule depositRevertsIfNoSharesMinted(env e) {
     uint256 assets; address receiver;
-    uint256 sharesBefore = balanceOf(receiver); 
+    uint256 sharesBefore = balanceOf( receiver); 
 
     require asset() != currentContract;
 
     deposit@withrevert(e, assets, receiver);
     bool isReverted = lastReverted;
 
-    uint256 sharesAfter = balanceOf(receiver);
+    uint256 sharesAfter = balanceOf( receiver);
 
     assert sharesBefore == sharesAfter => isReverted, "Remember, with great power comes great responsibility.";
+}
+
+
+    /*//////////////////////////////////////////////////////////////
+                               UNIT - TEST
+    //////////////////////////////////////////////////////////////*/
+
+rule integrityOfTransfer(env e,address to, uint256 amount) {
+    requireInvariant totalSupplyIsSumOfBalances(e);
+    uint256 toBalanceBefore = balanceOf(to);
+    uint256 fromBalanceBefore = balanceOf(e.msg.sender);
+
+    transfer(e,to,amount);
+
+    uint256 toBalanceAfter = balanceOf(to);
+    uint256 fromBalanceAfter = balanceOf(e.msg.sender);
+
+    assert (
+        to != e.msg.sender => 
+        (toBalanceAfter == toBalanceBefore + amount && 
+        fromBalanceAfter == fromBalanceBefore - amount) 
+    );
+
+    assert (
+        (to == e.msg.sender && amount != 0 ) => 
+        (toBalanceAfter == toBalanceBefore && 
+        fromBalanceAfter == fromBalanceBefore) 
+    );
+}
+
+rule integrityOfDeposit(env e, uint256 assets, address receiver) {
+    uint256 preview = previewDeposit(assets);
+    uint256 balanceBefore = balanceOf(receiver);
+    
+    uint256 actual = deposit (e, assets, receiver);
+
+    uint256 balanceAfter = balanceOf(receiver);
+
+    assert preview == actual; 
+    assert false;
 }
