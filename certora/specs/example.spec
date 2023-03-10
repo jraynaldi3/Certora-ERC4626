@@ -162,3 +162,26 @@ rule increaseOfBalanceOfUser (
     );
 }
 
+rule decreaseOfBalanceOfUser (
+    env e,
+    calldataarg args,
+    method f,
+    address user
+) {
+    requireInvariant totalSupplyIsSumOfBalances(e);
+    require currentContract != asset();
+    uint256 balanceBefore = balanceOf(user);
+    
+    f(e,args);
+
+    uint256 balanceAfter = balanceOf(user);
+
+    assert (
+        balanceAfter < balanceBefore => (
+            f.selector == transfer(address,uint256).selector ||
+            f.selector == transferFrom(address, address, uint256).selector ||
+            f.selector == redeem(uint256,address,address).selector ||
+            f.selector == withdraw(uint256,address,address).selector
+        )
+    );
+}
